@@ -1,8 +1,0 @@
-#!/bin/sh
-'''exec' "/home/adminuser/Documents/AI visit forms/openemr-ai-visit-forms-local-stt-fork/local-stt-server/.venv/bin/python" "$0" "$@"
-' '''
-import sys
-from ctranslate2.converters.opus_mt import main
-if __name__ == '__main__':
-    sys.argv[0] = sys.argv[0].removesuffix('.exe')
-    sys.exit(main())
