@@ -1,0 +1,16 @@
+[Unit]
+Description=OpenEMR AI Visit Forms faster-whisper STT Server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/openemr-ai-visit-forms-local-stt/local-stt-server
+ExecStart=/opt/openemr-ai-visit-forms-local-stt/local-stt-server/start_faster_whisper_server.sh
+Restart=on-failure
+RestartSec=5
+User=adminuser
+Environment=FASTER_WHISPER_HOST=127.0.0.1
+Environment=FASTER_WHISPER_PORT=9010
+
+[Install]
+WantedBy=multi-user.target

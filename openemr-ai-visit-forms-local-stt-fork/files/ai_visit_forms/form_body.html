@@ -1,0 +1,432 @@
+
+<h1>AI Dictation</h1>
+
+<div class="toolbar">
+  <span class="toolbar-label">DICTATION MODE:</span>
+  <div class="mode-tog">
+    <button type="button" id="btn-plain" class="active" onclick="setMode('plain')">Plain</button>
+    <button type="button" id="btn-hpc"   onclick="setMode('hpc')">HPC</button>
+    <button type="button" id="btn-soap"  onclick="setMode('soap')">SOAP</button>
+  </div>
+  <span class="sep">|</span>
+  <span class="toolbar-label">PROVIDER:</span>
+  <span class="prov-badge">
+    <span class="prov-dot" id="prov-dot"></span>
+    <span id="prov-name">Local &mdash; Ollama (Mistral 7B)</span>
+  </span>
+  <select class="prov-select" onchange="setProvider(this.value)">
+    <option value="local">Local &mdash; Ollama</option>
+    <option value="gpt">GPT API</option>
+    <option value="claude">Claude API</option>
+    <option value="gemma">Google AI &mdash; Gemini/Gemma</option>
+  </select>
+  <span class="prov-hint" id="prov-hint">&#128421; No data leaves server</span>
+</div>
+
+<div class="phi-bar phi-warn" id="phi-warn" style="display:none;">&#9888; Cloud provider active &mdash; PHI (name, DOB, MRN) will be scrubbed before transmission.</div>
+<div class="phi-bar phi-ok"   id="phi-ok"   style="display:none;">&#128274; PHI scrubber active &mdash; common identifiers are removed before the cloud call.</div>
+
+<div class="mic-strip">
+  <button type="button" class="mic-btn" id="mic-btn" onclick="toggleMic()">&#127908;</button>
+  <div class="mic-info">
+    <div class="mic-status" id="mic-status">Click mic to begin dictation</div>
+    <div class="mic-live"   id="mic-live">Live transcript will appear here&hellip;</div>
+  </div>
+  <textarea id="dictation-full-transcript" style="display:none;"></textarea>
+  <button type="button" class="btn toolbar-action btn-clear-action" onclick="clearAll()">Clear</button>
+  <button type="button" class="btn btn-blue toolbar-action btn-format-action" onclick="runAI()">Format with AI</button>
+  <span style="color:#ddd;margin:0 2px;">|</span>
+  <button type="button" class="btn toolbar-action btn-letter-action" onclick="openLetterModal()">Generate Letter</button>
+</div>
+
+<div class="review-box" id="review-box">
+  <h4>&#9888; AI formatted output &mdash; review and edit before accepting into record</h4>
+  <textarea id="review-text" rows="7"></textarea>
+  <div class="review-actions">
+    <button type="button" class="btn btn-green review-action-btn review-accept-btn" onclick="acceptAI()">Accept &amp; Fill Fields</button>
+    <button type="button" class="btn review-action-btn review-edit-btn" onclick="closeReview()">Edit Further</button>
+    <button type="button" class="btn btn-red review-action-btn review-discard-btn" onclick="closeReview()">Discard</button>
+  </div>
+</div>
+
+<!-- ══════════ PLAIN ══════════ -->
+<div class="mode-panel visible" id="panel-plain">
+  <div class="sec-box">
+    <div class="sec-head">Dictation</div>
+    <div class="sec-body">
+      <textarea id="pl-main" rows="12" placeholder="Begin dictating or type your notes here&hellip;"></textarea>
+    </div>
+  </div>
+  <div class="sec-box">
+    <div class="sec-head">Additional Notes</div>
+    <div class="sec-body">
+      <textarea id="pl-notes" rows="4" placeholder="Any supplementary notes&hellip;"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ HPC ══════════ -->
+<div class="mode-panel" id="panel-hpc">
+  <div class="sec-tabbar">
+    <button type="button" id="htab-hist"  class="active" onclick="setHpcTab('hist', this)">HPC</button>
+    <button type="button" id="htab-exam"               onclick="setHpcTab('exam', this)">Exam</button>
+    <button type="button" id="htab-imp"                onclick="setHpcTab('imp',  this)">Assessment</button>
+    <button type="button" id="htab-plan"               onclick="setHpcTab('plan', this)">Plan</button>
+    <button type="button" id="htab-notes"              onclick="setHpcTab('notes',this)">Notes</button>
+  </div>
+
+  <!-- HPC History -->
+  <div class="sub-panel visible" id="hsub-hist">
+    <div class="sec-box">
+      <div class="sec-head">Presenting Complaint</div>
+      <div class="sec-body">
+        <textarea id="hpc-pc" rows="3" placeholder="e.g. Lower abdominal pain for 3 days&hellip;"></textarea>
+      </div>
+    </div>
+    <div class="sec-box">
+      <div class="sec-head">History of Presenting Complaint Details</div>
+      <div class="sec-body">
+        <textarea id="hpc-hpi" rows="6" placeholder="Free-text details of the presenting complaint: chronology, symptom progression, relevant positives and negatives, prior care, and patient concerns&hellip;"></textarea>
+      </div>
+    </div>
+    <div class="sec-box">
+      <div class="sec-head">OB/GYN &amp; Relevant History</div>
+      <div class="sec-body">
+        <div class="two-col">
+          <div>
+            <div class="field-lbl">OB/GYN History</div>
+            <textarea id="hpc-obhx" rows="4" placeholder="LMP, cycle, parity, gravidity, contraception, previous procedures&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Review of Systems</div>
+            <textarea id="hpc-ros" rows="4" placeholder="Urinary, GI, constitutional, cardiovascular&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Past Medical / Surgical History</div>
+            <textarea id="hpc-pmhx" rows="3" placeholder="Significant past history, previous operations&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Medications &amp; Allergies</div>
+            <textarea id="hpc-meds" rows="3" placeholder="Current medications, known drug allergies&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Family History</div>
+            <textarea id="hpc-fhx" rows="3" placeholder="Relevant family history, inherited conditions, cancers, thromboembolic disease&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Investigations to Date</div>
+            <textarea id="hpc-ix-to-date" rows="3" placeholder="Relevant investigations already done: labs, imaging, pathology, prior results&hellip;"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ EXAM — traditional clinical order ══ -->
+  <div class="sub-panel" id="hsub-exam">
+    <div class="sec-box">
+      <div class="sec-head">Examination <span class="badge">Exam</span></div>
+      <div class="sec-body">
+
+        <!-- 1. Vitals -->
+        <div class="field-lbl" style="margin-bottom:3px;">Vital Signs</div>
+        <textarea id="ex-vitals" rows="3" placeholder="BP:        HR:        RR:        Temp:        SpO2:        Wt/BMI:" style="margin-bottom:10px;"></textarea>
+
+        <!-- 2. General -->
+        <div class="field-lbl" style="margin-bottom:3px;">General Appearance</div>
+        <textarea id="ex-gen" rows="2" placeholder="Well / unwell, conscious and oriented, distress level, pallor, jaundice, cyanosis, oedema, hydration status&hellip;" class="field-gap" style="margin-bottom:10px;"></textarea>
+
+        <!-- 3. Respiratory / Chest -->
+        <div class="field-lbl" style="margin-bottom:3px;">Respiratory System (Chest)</div>
+        <textarea id="ex-resp" rows="3" placeholder="Inspection: chest shape, chest wall movement, use of accessory muscles.&#10;Palpation: trachea, expansion, tactile fremitus.&#10;Percussion: resonant / dull / stony dull.&#10;Auscultation: air entry, added sounds (wheeze, crackles, rub)." style="margin-bottom:10px;"></textarea>
+
+        <!-- 4. CVS -->
+        <div class="field-lbl" style="margin-bottom:3px;">Cardiovascular System</div>
+        <textarea id="ex-cvs" rows="3" placeholder="Inspection: JVP, precordial bulge.&#10;Palpation: apex beat, heaves, thrills.&#10;Auscultation: heart sounds (S1, S2), murmurs, added sounds.&#10;Peripheral: pulses, capillary refill, oedema." style="margin-bottom:10px;"></textarea>
+
+        <!-- 5. Abdomen -->
+        <div class="field-lbl" style="margin-bottom:3px;">Abdomen</div>
+        <textarea id="ex-abdo" rows="4" placeholder="Inspection: scars, distension, hernias, visible peristalsis.&#10;Palpation: soft / rigid, tenderness (site), guarding, rebound, masses, liver, spleen, kidneys.&#10;Percussion: liver span, shifting dullness.&#10;Auscultation: bowel sounds." style="margin-bottom:10px;"></textarea>
+
+        <!-- 6. Pelvis -->
+        <div class="field-lbl" style="margin-bottom:3px;">Pelvic Examination</div>
+        <textarea id="ex-pelvis" rows="4" placeholder="Speculum: cervix appearance, discharge, bleeding on contact, IUD threads.&#10;Bimanual: uterine size / position / mobility / tenderness, adnexal masses / tenderness, cervical motion tenderness (CMT).&#10;Vulva / vagina: lesions, atrophy, prolapse." style="margin-bottom:10px;"></textarea>
+
+        <!-- 7. CNS -->
+        <div class="field-lbl" style="margin-bottom:3px;">Central Nervous System</div>
+        <textarea id="ex-cns" rows="3" placeholder="GCS / consciousness level.&#10;Orientation: person, place, time.&#10;Cranial nerves (if relevant).&#10;Peripheral neurology: power, tone, reflexes, sensation.&#10;Cerebellar / gait (if relevant)."></textarea>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Assessment -->
+  <div class="sub-panel" id="hsub-imp">
+    <div class="sec-box">
+      <div class="sec-head">Assessment &amp; Differential Diagnosis <span class="badge">Assessment</span></div>
+      <div class="sec-body">
+        <div class="two-col">
+          <div>
+            <div class="field-lbl">Primary / Working Diagnosis</div>
+            <textarea id="hpc-dx" rows="5" placeholder="Most likely diagnosis with reasoning&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Differential Diagnoses</div>
+            <textarea id="hpc-ddx" rows="5" placeholder="1.&#10;2.&#10;3."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plan -->
+  <div class="sub-panel" id="hsub-plan">
+    <div class="sec-box">
+      <div class="sec-head">Plan &amp; Management <span class="badge">Plan</span></div>
+      <div class="sec-body">
+        <div class="two-col">
+          <div>
+            <div class="field-lbl">Investigations Requested</div>
+            <textarea id="hpc-ix" rows="4" placeholder="Labs, imaging, microbiology, pathology&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Treatment / Interventions</div>
+            <textarea id="hpc-rx" rows="4" placeholder="Medications, procedures, referrals commenced&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Patient Education &amp; Counselling</div>
+            <textarea id="hpc-edu" rows="3" placeholder="Information given, consent discussed&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Follow-up &amp; Disposition</div>
+            <textarea id="hpc-fu" rows="3" placeholder="Review date, admission, discharge, referral&hellip;"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="sub-panel" id="hsub-notes">
+    <div class="sec-box">
+      <div class="sec-head">Additional Notes</div>
+      <div class="sec-body">
+        <textarea id="hpc-notes" rows="6" placeholder="Any supplementary remarks&hellip;"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SOAP ══════════ -->
+<div class="mode-panel" id="panel-soap">
+  <div class="sec-tabbar">
+    <button type="button" id="stab-s" class="active" onclick="setSoapTab('s', this)">S &mdash; Subjective</button>
+    <button type="button" id="stab-o"               onclick="setSoapTab('o', this)">O &mdash; Objective</button>
+    <button type="button" id="stab-a"               onclick="setSoapTab('a', this)">A &mdash; Assessment</button>
+    <button type="button" id="stab-p"               onclick="setSoapTab('p', this)">P &mdash; Plan</button>
+    <button type="button" id="stab-n"               onclick="setSoapTab('n', this)">Notes</button>
+  </div>
+
+  <div class="sub-panel visible" id="ssub-s">
+    <div class="sec-box">
+      <div class="sec-head">S &mdash; Subjective <span class="badge">SOAP</span></div>
+      <div class="sec-body">
+        <textarea id="soap-s" rows="8" placeholder="Patient's chief complaint and history in their own words. HPC, PMHx, medications, allergies, social history&hellip;"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-panel" id="ssub-o">
+    <div class="sec-box">
+      <div class="sec-head">O &mdash; Objective</div>
+      <div class="sec-body">
+        <!-- Vitals row -->
+        <div class="field-lbl" style="margin-bottom:3px;">Vital Signs</div>
+        <textarea id="soap-vitals" rows="3" placeholder="BP:        HR:        RR:        Temp:        SpO2:        Wt/BMI:" style="margin-bottom:10px;"></textarea>
+        <!-- Exam systems in order -->
+        <div class="field-lbl" style="margin-bottom:3px;">General Appearance</div>
+        <textarea id="soap-gen" rows="2" placeholder="Conscious, oriented, distress level, pallor, hydration&hellip;" style="margin-bottom:10px;"></textarea>
+        <div class="field-lbl" style="margin-bottom:3px;">Respiratory System</div>
+        <textarea id="soap-resp" rows="2" placeholder="Air entry, breath sounds, added sounds&hellip;" style="margin-bottom:10px;"></textarea>
+        <div class="field-lbl" style="margin-bottom:3px;">Cardiovascular System</div>
+        <textarea id="soap-cvs" rows="2" placeholder="HS I+II, murmurs, peripheral pulses, oedema&hellip;" style="margin-bottom:10px;"></textarea>
+        <div class="field-lbl" style="margin-bottom:3px;">Abdomen</div>
+        <textarea id="soap-abdo" rows="3" placeholder="Soft / rigid, tenderness, guarding, rebound, masses, bowel sounds&hellip;" style="margin-bottom:10px;"></textarea>
+        <div class="field-lbl" style="margin-bottom:3px;">Pelvic Examination</div>
+        <textarea id="soap-pelvis" rows="3" placeholder="Speculum findings, bimanual: uterus, adnexae, CMT&hellip;" style="margin-bottom:10px;"></textarea>
+        <div class="field-lbl" style="margin-bottom:3px;">CNS</div>
+        <textarea id="soap-cns" rows="2" placeholder="GCS, orientation, focal neurology (if relevant)&hellip;" style="margin-bottom:10px;"></textarea>
+        <div class="field-lbl" style="margin-bottom:3px;">Investigation Results</div>
+        <textarea id="soap-ix" rows="3" placeholder="Labs, imaging, other results available at time of assessment&hellip;"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-panel" id="ssub-a">
+    <div class="sec-box">
+      <div class="sec-head">A &mdash; Assessment</div>
+      <div class="sec-body">
+        <div class="two-col">
+          <div>
+            <div class="field-lbl">Primary Diagnosis</div>
+            <textarea id="soap-adx" rows="5" placeholder="Working diagnosis with clinical reasoning&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Differential Diagnoses</div>
+            <textarea id="soap-ddx" rows="5" placeholder="1.&#10;2.&#10;3."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-panel" id="ssub-p">
+    <div class="sec-box">
+      <div class="sec-head">P &mdash; Plan</div>
+      <div class="sec-body">
+        <div class="two-col">
+          <div>
+            <div class="field-lbl">Investigations</div>
+            <textarea id="soap-pix" rows="3" placeholder="Further tests ordered&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Treatment</div>
+            <textarea id="soap-rx" rows="3" placeholder="Medications, procedures, referrals&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Patient Counselling</div>
+            <textarea id="soap-edu" rows="3" placeholder="Education, consent, lifestyle advice&hellip;"></textarea>
+          </div>
+          <div>
+            <div class="field-lbl">Follow-up</div>
+            <textarea id="soap-fu" rows="3" placeholder="Review arrangements, admission, discharge&hellip;"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-panel" id="ssub-n">
+    <div class="sec-box">
+      <div class="sec-head">Additional Notes</div>
+      <div class="sec-body">
+        <textarea id="soap-notes" rows="6" placeholder="Any supplementary remarks&hellip;"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="form-footer">
+  <button type="button" class="btn btn-green btn-save-action" onclick="saveDictation()">&#10004; Save</button>
+  <button type="button" class="btn btn-cancel-action" onclick="top.restoreSession(); parent.closeTab(window.name, false);">&#10006; Cancel</button>
+  <span class="footer-saved" id="footer-saved"></span>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     LETTER TO REFERRING MD MODAL
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="letterModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>&#9993; Generate Letter to Referring Physician</span>
+      <button type="button" class="modal-close" onclick="closeLetterModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Config fields -->
+      <div class="letter-config">
+        <div class="letter-config-wide">
+          <label>Sender Facility</label>
+          <select id="ltr-facility" onchange="selectSenderFacility()">
+            <option value="">Use OpenEMR encounter/default facility...</option>
+          </select>
+        </div>
+        <div class="letter-config-wide">
+          <label>Address Book</label>
+          <select id="ltr-ref-select" onchange="selectReferringPhysician()">
+            <option value="">Select referring physician from OpenEMR address book...</option>
+          </select>
+        </div>
+        <div>
+          <label>Referring Physician</label>
+          <input type="text" id="ltr-ref-name" placeholder="Dr. A. Smith">
+        </div>
+        <div>
+          <label>Referring Practice / Hospital</label>
+          <input type="text" id="ltr-ref-practice" placeholder="Nassau Medical Centre">
+        </div>
+        <div class="letter-config-wide">
+          <label>Recipient Address</label>
+          <textarea id="ltr-ref-address" rows="3" placeholder="Street&#10;City, State ZIP"></textarea>
+        </div>
+        <div>
+          <label>Recipient Email</label>
+          <input type="email" id="ltr-ref-email" placeholder="doctor@example.com">
+        </div>
+        <div>
+          <label>Salutation</label>
+          <select id="ltr-salutation">
+            <option>Dear Dr.</option>
+            <option>Dear Colleague,</option>
+            <option>To Whom It May Concern,</option>
+          </select>
+        </div>
+        <div>
+          <label>Patient Name (for letter)</label>
+          <input type="text" id="ltr-patient" placeholder="Ms. Jane Doe">
+        </div>
+        <div>
+          <label>Patient DOB</label>
+          <input type="text" id="ltr-dob" placeholder="01 Jan 1990">
+        </div>
+        <div>
+          <label>Letter Date</label>
+          <input type="text" id="ltr-date" value="">
+        </div>
+        <div>
+          <label>Consulting Physician</label>
+          <input type="text" id="ltr-consultant" value="">
+        </div>
+        <div>
+          <label>Specialty</label>
+          <input type="text" id="ltr-specialty" value="">
+        </div>
+        <div>
+          <label>Letter Type</label>
+          <select id="ltr-type" onchange="buildLetter()">
+            <option value="consult">Consultation / Referral Response</option>
+            <option value="discharge">Discharge Summary</option>
+            <option value="results">Results / Investigation Report</option>
+            <option value="followup">Follow-up Letter</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-blue" onclick="buildLetter()">&#9654; Generate Draft</button>
+        <span class="letter-help">Pulls from accepted chart fields and selected address-book recipient</span>
+      </div>
+
+      <!-- Letter preview / edit -->
+      <div class="letter-preview-wrap">
+        <div class="letter-preview-hd">
+          Letter Preview
+          <div class="letter-mini-actions">
+            <button type="button" class="btn" onclick="copyLetter()">&#128203; Copy</button>
+            <button type="button" class="btn" onclick="printLetter()">&#128424; Print / PDF</button>
+          </div>
+        </div>
+        <div class="letter-paper" id="letter-paper"></div>
+        <textarea class="letter-preview" id="letter-text" rows="12" spellcheck="true" oninput="renderLetterPreview()"></textarea>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-blue letter-footer-btn" onclick="copyLetter()">&#128203; Copy Letter</button>
+      <button type="button" class="btn btn-green letter-footer-btn" onclick="printLetter()">&#128424; Print / Export PDF</button>
+      <button type="button" class="btn btn-red letter-footer-btn" onclick="closeLetterModal()">&#10006; Close</button>
+      <span class="letter-copied" id="letter-copied"></span>
+    </div>
+  </div>
+</div>

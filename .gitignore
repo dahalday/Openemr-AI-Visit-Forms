@@ -1,0 +1,7 @@
+*/backups/
+*/.venv/
+*/__pycache__/
+*.log
+*.pid
+.DS_Store
+release/
